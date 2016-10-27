@@ -1,35 +1,18 @@
-package consulconfig
+package config
 
 import (
 	"fmt"
 	"reflect"
 	"strconv"
 
-	consul "github.com/hashicorp/consul/api"
 	"github.com/pkg/errors"
 )
 
-type configProvider interface {
+type ConfigProvider interface {
 	Get(s string) (string, error)
 }
 
-type consulProvider struct {
-	client *consul.KV
-}
-
-func (c *consulProvider) Get(s string) (string, error) {
-	p, _, err := c.client.Get(s, nil)
-	if p != nil {
-		return string(p.Value), nil
-	}
-	return "", err
-}
-
-func Process(c interface{}, kv *consul.KV) error {
-	return process(c, &consulProvider{kv})
-}
-
-func process(c interface{}, prov configProvider) error {
+func Process(c interface{}, prov ConfigProvider) error {
 	t := reflect.ValueOf(c)
 	if t.Kind() != reflect.Ptr {
 		return fmt.Errorf("Config cannot be pointer")
@@ -45,7 +28,7 @@ func process(c interface{}, prov configProvider) error {
 	return nil
 }
 
-func setField(fVal reflect.Value, fSpec reflect.StructField, prov configProvider) error {
+func setField(fVal reflect.Value, fSpec reflect.StructField, prov ConfigProvider) error {
 	fName := fSpec.Tag.Get("consul")
 	if len(fName) == 0 {
 		fName = fSpec.Name
@@ -66,10 +49,21 @@ func setField(fVal reflect.Value, fSpec reflect.StructField, prov configProvider
 
 	switch fVal.Kind() {
 	case reflect.Int:
-		strconv.ParseInt(provVal, 0, fType.Bits())
+		i, err := strconv.ParseInt(provVal, 0, fType.Bits())
+		if err != nil {
+			return err
+		}
+		fVal.SetInt(i)
 
 	case reflect.String:
 		fVal.SetString(provVal)
+
+	case reflect.Bool:
+		b, err := strconv.ParseBool(provVal)
+		if err != nil {
+			return err
+		}
+		fVal.SetBool(b)
 	}
 
 	return nil

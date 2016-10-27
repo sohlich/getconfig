@@ -1,4 +1,4 @@
-package consulconfig
+package consul
 
 import (
 	"encoding/json"
@@ -31,19 +31,4 @@ func (s *DefTestSuite) TestProcess(c *C) {
 	out, _ := json.Marshal(cfg)
 	log.Printf("%s", out)
 
-}
-
-func (s *DefTestSuite) TestConsul(c *C) {
-	consul, _ := api.NewClient(api.DefaultConfig())
-	p, _, err := consul.KV().Get("host", nil)
-	if err != nil {
-		c.Fail()
-	}
-	c.Assert("10.0.0.1", Equals, string(p.Value))
-
-	p, _, err = consul.KV().Get("service/host", nil)
-	if err != nil {
-		c.Fail()
-	}
-	c.Assert("1.1.1.1", Equals, string(p.Value))
 }
