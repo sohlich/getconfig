@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 )
@@ -33,7 +35,7 @@ func setField(fVal reflect.Value, fSpec reflect.StructField, prov ConfigProvider
 	if len(fName) == 0 {
 		fName = fSpec.Name
 	}
-	provVal, err := prov.Get(fName)
+	inVal, err := prov.Get(fName)
 	if err != nil {
 		errors.Wrap(err, "Cannot parse value from consul")
 	}
@@ -46,24 +48,64 @@ func setField(fVal reflect.Value, fSpec reflect.StructField, prov ConfigProvider
 	if !fVal.CanSet() {
 		return fmt.Errorf("Cannot set field")
 	}
+	return writeField(fVal, fType, inVal)
+}
+
+func writeField(fVal reflect.Value, fType reflect.Type, inVal string) error {
 
 	switch fVal.Kind() {
-	case reflect.Int:
-		i, err := strconv.ParseInt(provVal, 0, fType.Bits())
+	case reflect.String:
+		fVal.SetString(inVal)
+
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		var (
+			val int64
+			err error
+		)
+
+		if fVal.Kind() == reflect.Int64 && fType.PkgPath() == "time" && fType.Name() == "Duration" {
+			var d time.Duration
+			d, err = time.ParseDuration(inVal)
+			val = int64(d)
+		} else {
+			val, err = strconv.ParseInt(inVal, 0, fType.Bits())
+		}
 		if err != nil {
 			return err
 		}
-		fVal.SetInt(i)
+		fVal.SetInt(val)
 
-	case reflect.String:
-		fVal.SetString(provVal)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		val, err := strconv.ParseUint(inVal, 0, fType.Bits())
+		if err != nil {
+			return err
+		}
+		fVal.SetUint(val)
+
+	case reflect.Float32, reflect.Float64:
+		val, err := strconv.ParseFloat(inVal, fType.Bits())
+		if err != nil {
+			return err
+		}
+		fVal.SetFloat(val)
 
 	case reflect.Bool:
-		b, err := strconv.ParseBool(provVal)
+		b, err := strconv.ParseBool(inVal)
 		if err != nil {
 			return err
 		}
 		fVal.SetBool(b)
+
+	case reflect.Slice:
+		vals := strings.Split(inVal, ",")
+		sl := reflect.MakeSlice(fType, len(vals), len(vals))
+		for i, val := range vals {
+			err := writeField(sl.Index(i), fType, val)
+			if err != nil {
+				return err
+			}
+		}
+		fVal.Set(sl)
 	}
 
 	return nil
