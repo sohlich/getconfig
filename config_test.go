@@ -34,7 +34,8 @@ func (s *DefTestSuite) TestProcess(c *C) {
 		"consul_port": "8080",
 	}
 
-	Process(cfg, p)
+	Register(p)
+	Process(cfg)
 	c.Assert(cfg.Host, Equals, "10.0.0.1")
 
 	log.Println("### TestProcess result ###")

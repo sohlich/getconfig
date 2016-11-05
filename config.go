@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"reflect"
 	"strconv"
 	"strings"
@@ -14,7 +15,18 @@ type ConfigProvider interface {
 	Get(s string) (string, error)
 }
 
-func Process(c interface{}, prov ConfigProvider) error {
+var (
+	provider ConfigProvider
+)
+
+func RegisterProvider(p ConfigProvider) {
+	if provider != nil {
+		log.Panic("Provider already registred")
+	}
+	provider = p
+}
+
+func Process(c interface{}) error {
 	t := reflect.ValueOf(c)
 	if t.Kind() != reflect.Ptr {
 		return fmt.Errorf("Config cannot be pointer")
@@ -25,7 +37,7 @@ func Process(c interface{}, prov ConfigProvider) error {
 	for idx := 0; idx < fieldCount; idx++ {
 		fVal := t.Field(idx)
 		fSpec := typeOfSpec.Field(idx)
-		setField(fVal, fSpec, prov)
+		setField(fVal, fSpec, provider)
 	}
 	return nil
 }
