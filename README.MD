@@ -1,7 +1,7 @@
-# consulconfig
+# getconfig
 
-Read your the config from Consul KV storage.
+Parse your config from anywhere.
 
 ```
-import "github.com/sohlicg/consulconfig"
+import "github.com/sohlich/getconfig"
 ```
