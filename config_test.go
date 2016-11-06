@@ -1,4 +1,4 @@
-package config
+package getconfig
 
 import (
 	"encoding/json"

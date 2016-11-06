@@ -1,4 +1,4 @@
-package config
+package getconfig
 
 import (
 	"fmt"
@@ -27,6 +27,10 @@ func RegisterProvider(p ConfigProvider) {
 }
 
 func Process(c interface{}) error {
+	return ProcessByProvider(c, provider)
+}
+
+func ProcessByProvider(c interface{}, prv ConfigProvider) error {
 	t := reflect.ValueOf(c)
 	if t.Kind() != reflect.Ptr {
 		return fmt.Errorf("Config cannot be pointer")
@@ -37,16 +41,17 @@ func Process(c interface{}) error {
 	for idx := 0; idx < fieldCount; idx++ {
 		fVal := t.Field(idx)
 		fSpec := typeOfSpec.Field(idx)
-		setField(fVal, fSpec, provider)
+		setField(fVal, fSpec, prv)
 	}
 	return nil
 }
 
 func setField(fVal reflect.Value, fSpec reflect.StructField, prov ConfigProvider) error {
-	fName := fSpec.Tag.Get("consul")
+	fName := fSpec.Tag.Get("config")
 	if len(fName) == 0 {
 		fName = fSpec.Name
 	}
+	fName = strings.ToLower(fName)
 	inVal, err := prov.Get(fName)
 	if err != nil {
 		errors.Wrap(err, "Cannot parse value from consul")
