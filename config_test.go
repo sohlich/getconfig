@@ -9,8 +9,8 @@ import (
 )
 
 type TestConfig struct {
-	Host string `consul:"consul_host"`
-	Port int    `consul:"consul_port"`
+	Host string `config:"consul_host"`
+	Port int    `config:"consul_port"`
 }
 
 func Test(t *testing.T) { TestingT(t) }
@@ -34,7 +34,7 @@ func (s *DefTestSuite) TestProcess(c *C) {
 		"consul_port": "8080",
 	}
 
-	Register(p)
+	RegisterProvider(p)
 	Process(cfg)
 	c.Assert(cfg.Host, Equals, "10.0.0.1")
 
